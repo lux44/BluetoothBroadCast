@@ -4,9 +4,12 @@ import com.lux.zena.bluetoothbroadcast.R
 import android.Manifest
 import android.app.Activity
 import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
+import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.content.Context
 import android.content.Intent
@@ -74,6 +77,9 @@ class MainActivity : AppCompatActivity() {
     private var scanning = false
     private var handler = Handler(Looper.getMainLooper())
 
+    // GATT Client 객체
+    private var bluetoothGatt:BluetoothGatt? = null
+
     // Device Mac Address
     lateinit var deviceMacAddresses: String
 
@@ -85,7 +91,31 @@ class MainActivity : AppCompatActivity() {
 
             if (result!=null){
                 deviceMacAddresses = result.device.address
+                Log.i("blog","$deviceMacAddresses")
             }
+        }
+    }
+
+    // 4-3. 블루투스 스캔 함수
+    private fun scanLeDevice(){
+        if (!scanning){
+            handler.postDelayed({
+                scanning=false
+                if (ActivityCompat.checkSelfPermission(this,Manifest.permission.BLUETOOTH_SCAN)==PackageManager.PERMISSION_GRANTED){
+                    bluetoothLeScanner.stopScan(leScanCallback)
+                    Log.i("over","scan over")
+                    if (deviceMacAddresses!=null){
+                        val device:BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(deviceMacAddresses)
+                        bluetoothGatt = device?.connectGatt(this, true,bluetoothGattCallback)
+
+                        Log.e("blog","CONNECT GATT")
+                    }
+                }
+            },3000L)
+            scanning=true
+            val scanFilter:ScanFilter = ScanFilter.Builder()
+                .setDeviceAddress("C6:AF:2E:CA:EE:1E")
+                .build()
         }
     }
 
