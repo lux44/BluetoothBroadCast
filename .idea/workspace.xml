@@ -13,8 +13,7 @@
     <option name="autoReloadType" value="NONE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="4151251d-f4a8-4d9b-a0d5-51908bde6b95" name="Changes" comment="asdf">
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gradle.xml" afterDir="false" />
+    <list default="true" id="4151251d-f4a8-4d9b-a0d5-51908bde6b95" name="Changes" comment="copy">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/app/src/main/java/com/lux/zena/bluetoothbroadcast/MainActivity.kt" beforeDir="false" afterPath="$PROJECT_DIR$/app/src/main/java/com/lux/zena/bluetoothbroadcast/MainActivity.kt" afterDir="false" />
     </list>
@@ -23,7 +22,7 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[192.168.0.41:40995]" />
+  <component name="ExecutionTargetManager" SELECTED_TARGET="device_and_snapshot_combo_box_target[adb-R3CN105218X-iqGiYm._adb-tls-connect._tcp.]" />
   <component name="ExternalProjectsData">
     <projectState path="$PROJECT_DIR$">
       <ProjectState />
@@ -150,7 +149,14 @@
       <option name="project" value="LOCAL" />
       <updated>1657871220800</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="copy">
+      <created>1658109229682</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1658109229682</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -170,6 +176,7 @@
       <path value="$PROJECT_DIR$/BluetoothBroadCast" />
     </ignored-roots>
     <MESSAGE value="asdf" />
-    <option name="LAST_COMMIT_MESSAGE" value="asdf" />
+    <MESSAGE value="copy" />
+    <option name="LAST_COMMIT_MESSAGE" value="copy" />
   </component>
 </project>

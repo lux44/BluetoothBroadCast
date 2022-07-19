@@ -23,10 +23,16 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import com.lux.zena.bluetoothbroadcast.databinding.ActivityMainBinding
 import java.util.*
+import kotlin.experimental.and
 
 class MainActivity : AppCompatActivity() {
 
-    val binding:ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+    private val binding:ActivityMainBinding by lazy { ActivityMainBinding.inflate(layoutInflater) }
+
+    companion object{
+        // request code - 아무숫자
+        private const val MULTIPLE_PERMISSION_CODE = 100
+    }
 
     // 1. 저전력 블루투스를 지원하지 않는 기기에도 앱을 제공하고 싶을 때 저전력 블루투스의 가용성 지정
     private fun PackageManager.missingSystemFeature(name:String):Boolean = !hasSystemFeature(name)
@@ -41,7 +47,7 @@ class MainActivity : AppCompatActivity() {
     private fun runtimeCheckSelfPermission(context: Context, permissions:Array<String>):Boolean = permissions.all {
         ActivityCompat.checkSelfPermission(context,it) == PackageManager.PERMISSION_GRANTED
     }
-    private val multipleCode = 1000
+
 
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -50,7 +56,7 @@ class MainActivity : AppCompatActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         when(requestCode){
-            multipleCode->{
+            MULTIPLE_PERMISSION_CODE->{
                 if (grantResults.isNotEmpty()&& grantResults[0]== PackageManager.PERMISSION_GRANTED){
                     Log.i("권한 테스트","사용자가 권한 부여")
                 }else{
@@ -75,76 +81,105 @@ class MainActivity : AppCompatActivity() {
     // 4. 블루투스 스캔
     // 4-1. 블루투스 스캔 관련 변수들
     private lateinit var bluetoothLeScanner: BluetoothLeScanner
-    private var scanning = false
-    private var handler = Handler(Looper.getMainLooper())
-
-    // 4-1-1. scan filter를 담는 배열
-    var filter: MutableList<ScanFilter> = mutableListOf()
-
     // GATT Client 객체
     private var bluetoothGatt:BluetoothGatt? = null
 
-    // Device Mac Address
-    private var deviceMacAddresses: String=""
+    // 4-2. 블루투스 스캔 관련 변수
+    private var scanning = false
+    private var handler = Handler(Looper.getMainLooper())
 
-    // 4-2. 블루투스 스캔 콜백 메소드
+    // 4-2-1. scan filter 를 담는 배열
+    var filter: MutableList<ScanFilter> = mutableListOf()
+
+    // 4-2-2. 블루투스 스캔 콜백 메소드
     private val leScanCallback = object : ScanCallback() {
         @SuppressLint("MissingPermission")
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
             super.onScanResult(callbackType, result)
             Log.i("blog","$callbackType, $result")
+            result?.let {
 
-            if (result!=null){
-                Log.i("blog","${result.device}")
-                deviceMacAddresses = result.device.toString()
-                Log.i("blog","$deviceMacAddresses")
+                // 내가 찾는 조건이 존재할 때
+                if (it.device.name != null && it.device.name.contains("BC")){
+                    // 연결
+                    val device:BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(it.device.address)
 
-                val device:BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(deviceMacAddresses)
-                bluetoothGatt = device?.connectGatt(this@MainActivity,true,bluetoothGattCallback)
+                    Log.i("blog","연결하는 맥 어드레스 : ${result.device.address}")
+                    bluetoothGatt = device?.connectGatt(this@MainActivity,true,bluetoothGattCallback)
+
+                    // 조건 충족 후 스캔 중지
+                    bluetoothLeScanner.stopScan(this)
+                    Log.e("STOP","STOP SCAN")
+                }else return
             }
         }
     }
 
-    // 4-3. 블루투스 스캔 함수
-    private fun scanLeDevice(){
-        if (!scanning){
-            handler.postDelayed({
-                scanning=false
-                if (ActivityCompat.checkSelfPermission(this,Manifest.permission.BLUETOOTH_SCAN)==PackageManager.PERMISSION_GRANTED){
-                    bluetoothLeScanner.stopScan(leScanCallback)
-                    Log.i("over","scan over")
-                    if (deviceMacAddresses!=null){
-                        val device:BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(deviceMacAddresses)
-                        bluetoothGatt = device?.connectGatt(this, true,bluetoothGattCallback)
+    // 4-3. 블루투스 스캔 함수 ( 필터를 직접 걸고 싶을 때) - 지금은 딱히 필터가 필요 없으므로 주석
+//    private fun scanLeDevice(){
+//        if (!scanning){
+//            handler.postDelayed({
+//                scanning=false
+//                if (ActivityCompat.checkSelfPermission(this,Manifest.permission.BLUETOOTH_SCAN)==PackageManager.PERMISSION_GRANTED){
+//                    bluetoothLeScanner.stopScan(leScanCallback)
+//                    Log.i("over","scan over")
+//                    if (deviceMacAddresses!=null){
+//                        val device:BluetoothDevice? = bluetoothAdapter?.getRemoteDevice(deviceMacAddresses)
+//                        bluetoothGatt = device?.connectGatt(this, true,bluetoothGattCallback)
+//
+//                        Log.e("blog","CONNECT GATT")
+//                    }
+//                }
+//            },3000L)
+//            scanning=true
+//            // Mac 주소 or UUID or Device name을 이용해 기기 찾기
+//            val scanFilter:ScanFilter = ScanFilter.Builder()
+//                .setDeviceAddress("C6:AF:2E:CA:EE:1E")
+//                .build()
+//
+//            // 스캔 설정
+//            val scanSettings = ScanSettings.Builder()
+//                .setScanMode(
+//                    ScanSettings.SCAN_MODE_LOW_POWER or ScanSettings.SCAN_MODE_LOW_LATENCY
+//                ).build()
+//
+//            filter.add(scanFilter)
+//            bluetoothLeScanner.startScan(filter,scanSettings,leScanCallback)
+//        }else{
+//            scanning=false
+//            bluetoothLeScanner.stopScan(leScanCallback)
+//            Log.e("stop","STOP SCAN")
+//        }
+//    }
 
-                        Log.e("blog","CONNECT GATT")
-                    }
-                }
-            },3000L)
-            scanning=true
-            // Mac 주소 or UUID or Device name을 이용해 기기 찾기
-            val scanFilter:ScanFilter = ScanFilter.Builder()
-                .setDeviceAddress("C6:AF:2E:CA:EE:1E")
-                .build()
+    // 6. 읽어들인 데이터 파싱 함수
+    fun getParsingTemperature(byteArray: ByteArray?): String {
+        if(byteArray == null)
+            return "0.0"
 
-            // 스캔 설정
-            val scanSettings = ScanSettings.Builder()
-                .setScanMode(
-                    ScanSettings.SCAN_MODE_LOW_POWER or ScanSettings.SCAN_MODE_LOW_LATENCY
-                ).build()
+        if(byteArray.size > 5) {
+            //sb.append(String.format("%02x ", byteArray[idx] and 0xff.toByte()))
+            val sb = StringBuffer()
+            sb.append(String.format("%02x", byteArray[3] and 0xff.toByte()))
+            sb.append(String.format("%02x", byteArray[2] and 0xff.toByte()))
+            sb.append(String.format("%02x", byteArray[1] and 0xff.toByte()))
 
-            filter.add(scanFilter)
-            bluetoothLeScanner.startScan(filter,scanSettings,leScanCallback)
-        }else{
-            scanning=false
-            bluetoothLeScanner.stopScan(leScanCallback)
-            Log.e("stop","STOP SCAN")
+            val temperature = Integer.parseInt(sb.toString(), 16)
+
+            val value: Float = if(String.format("%02x", byteArray[4] and 0xff.toByte()) == "ff") {
+                temperature.toFloat() / 10.toFloat()
+            } else
+                temperature.toFloat() / 100.0f
+            return value.toString()
+        }
+        else {
+            return "0.0"
         }
     }
 
     // 5. 데이터 읽어들이기
 
-    //5-1. 데이터 담을 변수
+    // 5-1. 데이터 담을 변수
     private lateinit var service:BluetoothGattService
     private lateinit var readCharacteristic: BluetoothGattCharacteristic
 
@@ -158,7 +193,12 @@ class MainActivity : AppCompatActivity() {
                 if (gatt!=null){
                     Log.e("TAG","${gatt.services}, $gatt @@@@@@@")
 
-                    displayGattServices(gatt.services, gatt)
+                    gatt.services.forEach { service->
+                        if (service.uuid.toString() == "00001809-0000-1000-8000-00805f9b34fb"){
+                            displayGattServices(service.uuid.toString(), gatt)
+                        }
+                    }
+
                     Log.i("blog", "after read")
                 }
             }
@@ -203,47 +243,23 @@ class MainActivity : AppCompatActivity() {
             characteristic: BluetoothGattCharacteristic?
         ) {
             super.onCharacteristicChanged(gatt, characteristic)
-            Log.i("blog","Characteristic Changed : ${characteristic.toString()}" )
+            Log.i("blog","Characteristic Changed : ${characteristic.toString()}, value : ${characteristic?.value.toString()}" )
+            var tp = getParsingTemperature(characteristic?.value)
+            Log.e("TP", "TP : $tp")
         }
     }
 
     @SuppressLint("MissingPermission")
-    private fun displayGattServices(gattService: List<BluetoothGattService>?, gatt: BluetoothGatt){
-        if (gattService==null){
-            Log.i("blog","gattService == null")
-            return
-        }
-        var serviceUUID:String?
-        var characteristicUUID:String?
+    private fun displayGattServices(serviceUUID:String, gatt: BluetoothGatt){
 
-        // Loops through available GATT services
-        // 값이 제대로 들어갔나 확인
-        gattService.forEach {
-            serviceUUID=it.uuid.toString()
-            val gattCharacteristic:MutableList<BluetoothGattCharacteristic> = it.characteristics
-            Log.i("blog", "Service : $serviceUUID")
-
-            gattCharacteristic.forEach {    gattCharacteristics->
-                characteristicUUID = gattCharacteristics.uuid.toString()
-                Log.i("blog","Characteristic : $characteristicUUID")
-                Log.i("blog","${gattCharacteristics.writeType}, ${gattCharacteristics.permissions}, ${gattCharacteristics.properties}")
-
-                gattCharacteristics.descriptors.forEach { descriptor->
-                    Log.i("blog","descriptor: ${descriptor.uuid}")
-                }
-                gatt.readCharacteristic(gattCharacteristics)
-                Log.i("blog", "read")
-            }
-            Log.i("blog","~~~~~~~~~~~~~~~~~~")
-        }
-
-        service= bluetoothGatt!!.getService(UUID.fromString("00001809-0000-1000-8000-00805f9b34fb"))
+        service = gatt.getService(UUID.fromString(serviceUUID))
         readCharacteristic = service.getCharacteristic(UUID.fromString("00002a1c-0000-1000-8000-00805f9b34fb"))
 
         val notifyDescriptor = readCharacteristic.getDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"))
+
         notifyDescriptor.value = BluetoothGattDescriptor.ENABLE_INDICATION_VALUE
 
-        bluetoothGatt?.apply {
+        gatt?.apply {
             Log.i("blog","write Descriptor")
             writeDescriptor(notifyDescriptor)
             setCharacteristicNotification(readCharacteristic,true)
@@ -252,6 +268,7 @@ class MainActivity : AppCompatActivity() {
 
 
 
+    @SuppressLint("MissingPermission")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         //setContentView(R.layout.activity_main)
@@ -265,23 +282,17 @@ class MainActivity : AppCompatActivity() {
 
         // 2-2. 퍼미션 체크
         if (!runtimeCheckSelfPermission(this,permissions)){
-            ActivityCompat.requestPermissions(this,permissions,multipleCode)
+            ActivityCompat.requestPermissions(this,permissions, MULTIPLE_PERMISSION_CODE)
         }else Log.i("권한 테스트","권한 있음.")
 
         // 3. 블루투스 기능 켜기
-        // 3-1. registerForActivity 사용하기 위한 resultLauncher 객체 만들기
-        val resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
-            result ->
-                if (result.resultCode == Activity.RESULT_OK) Log.i("BT","result ok")
-                else Log.i("BT","result cancel")
-        }
-
-        // 3-2. 블루투스 기능 활성화
+        // 3-1. 블루투스 기능 활성화
         if (bluetoothAdapter == null){
             Toast.makeText(this, "Device does not support bluetooth", Toast.LENGTH_SHORT).show()
         }else {
             if (!bluetoothAdapter!!.isEnabled){
                 var enableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                // 3-2. registerForActivity 사용하기 위한 resultLauncher 객체 만들기
                 var resultLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()){
                     if (it.resultCode == RESULT_OK) enableIntent = it.data!!
                 }
@@ -290,7 +301,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         bluetoothLeScanner = bluetoothAdapter!!.bluetoothLeScanner
-        binding.tvScan.setOnClickListener { scanLeDevice() }
+        binding.tvScan.setOnClickListener { bluetoothLeScanner.startScan(leScanCallback) }
 
 
     }
